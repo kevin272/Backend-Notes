@@ -3,7 +3,7 @@ These are some personal notes about backend used in MERN Stack application dev p
 
 ---
 
-## Working Process Intro
+## Common Working Process Intro
 
 ### Server Setup
 I generally setup a basic server to start the development process. A quick server.js/ index.js with app initialization via express and port env variable usage is preferred. I also predefine the CORS integration with a basic template frontend to make future checkings easy. 
@@ -25,7 +25,6 @@ app.get("/",(req,res) => {
 })
 
 app.listen(PORT, () => {
-    connectDB();
     console.log("Server Running on http://localhost:"+ PORT)
 })
 ```
@@ -73,3 +72,8 @@ export const connectDB = async () => {
 	}
 };
 ```
+After this you can add connectDB(); to the server.
+
+---
+
+
