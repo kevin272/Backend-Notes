@@ -140,5 +140,50 @@ export const generateVerificationCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 ```
-I generally place these functions in the helper.js
+I generally place these functions in the `helper.js`
 
+The full function block for signup controller is: 
+
+```js
+export const signup = async (req,res) => {
+    const{email,password,name} = req.body;
+    try {
+        if(!email||!password||!name){
+            throw new Error("All fields are required");
+        }
+        const userAlreadyExists = await User.findOne({email});
+        if (userAlreadyExists){return res.status(400).json({success:false, message: "User Already Exists"})};
+        
+    } catch (error) {
+        return res.status(400).json({success:false, message: error.message});
+        
+    }
+    const hashedPassword = await bcryptjs.hash(password,10);
+    const verificationToken  = generateVerificationCode();
+    
+    const user = new User({  //Create new user Document
+        email,
+        password: hashedPassword,
+        name,
+        verificationToken,
+        verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 *1000 //24hrs
+    })
+
+    await user.save(); // Save the user to the Database
+
+    generateTokenAndSetCookie(res,user._id);
+    
+    await sendVerificationEmail(user.email, verificationToken);
+
+    res.status(201).json({
+        success: true,
+        message: "User created successfully",
+        user: {
+            ...user._doc,
+            password: undefined,
+        },
+    })
+}
+```
+
+If we understand the signup process, login and logout become wayy to easy
