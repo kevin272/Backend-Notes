@@ -12,6 +12,8 @@ The basic code may look like:
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+
 dotenv.config(); //Never forget this
 
 const PORT = process.env.PORT || 5000;// I always use this port idk why
@@ -19,6 +21,8 @@ const app = express();
 
 app.use(cors({origin:"http://localhost:...", credentials: true}));
 app.use(express.json());//This parses response json in req.body
+app.use(cookieParser()); //I will explain later but in general token and cookies usage
+
 
 app.get("/",(req,res) => {
     res.send("Hello World!");
@@ -142,9 +146,52 @@ export const generateVerificationCode = () => {
 ```
 I generally place these functions in the `helper.js`
 
-The generated verificationToken can be used to send verificationEmail to user via emailjs.
-#### Emailjs
-It is a very simple utility toolkit for sending mails from the server. We can use custom templates or use from the templates provided by emailjs. 
+The generated verificationToken and verificationCode can be used to send verificationEmail to user via mailtrap SMTP.
+#### MailTrap
+It is a very simple utility toolkit for sending mails from the server. We can use custom templates or use from the templates provided. Generally, nodemailer is used for simple mails such as verification emails and welcome emails.
+
+Firstly a config is needed to setup mailtrap which needs MAILTRAP_TOKEN that is obtained from creating an account from their website.
+```js
+import { MailtrapTransport } from "mailtrap";
+import dotenv from "dotenv";
+import Nodemailer from "nodemailer";
+dotenv.config();
+
+export const mailtrapClient = Nodemailer.createTransport(
+  MailtrapTransport({
+    token: process.env.MAILTRAP_TOKEN,
+  })
+);
+
+export const sender = {
+  address: "hello@gmail.com.np",
+  name: "Company_name",
+};
+```
+
+The structure of mail sending is in the form of `from:, to: , subject: , html: ,category: ,`.
+You might be confused by the html part but it is the section of using template for the mail. We pass the `email` and `verificationToken` to the email sending function and replace the placeholder value inside the template with the parameter value.
+```js
+export const sendVerificationEmail =  async (email,verificationToken) => {
+    const recipient = [email];
+
+    try {
+        const response = await mailtrapClient.sendMail({
+            from: sender,
+            to: recipient,
+            subject: "Verify your email",
+            html: VERIFICATION_EMAIL_TEMPLATE.replace("verificationCode",verificationToken),
+            category: "Email Verification"
+        })
+
+        console.log("Email sent successfully",response);
+        
+    } catch (error) {
+        console.error(`Error sending verification`,error);
+        throw new Error(`Error sending verification email: ${error}`)
+    }
+}
+```
 
 The full function block for signup controller is: 
 
@@ -236,3 +283,11 @@ export const logout = async (req,res) => {
     });
 }
 ```
+****IMPORTANT NOTES/TIPS TO CONSIDER****
+- Use `try/catch` in async functions.
+- Use `Postman` API calls to verify each endpoint
+- Use `.env` for all secrets 
+- Never expose internal error details to the client
+- Use `JWT tokens` + `httpOnly` cookies for secure session auth.
+
+
