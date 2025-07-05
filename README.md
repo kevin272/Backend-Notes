@@ -142,6 +142,10 @@ export const generateVerificationCode = () => {
 ```
 I generally place these functions in the `helper.js`
 
+The generated verificationToken can be used to send verificationEmail to user via emailjs.
+#### Emailjs
+It is a very simple utility toolkit for sending mails from the server. We can use custom templates or use from the templates provided by emailjs. 
+
 The full function block for signup controller is: 
 
 ```js
@@ -186,4 +190,49 @@ export const signup = async (req,res) => {
 }
 ```
 
-If we understand the signup process, login and logout become wayy to easy
+If we understand the signup process, login and logout become wayy to easy.
+
+### Login
+In the login function, email and password are passed as arguments. We can first check if user exits or not by `User.findOne({email})`. After that, we can use `bcrypt.compare` to compare between input `password` and `User.password`. The output is true or false. If true, call `GenerateTokenandSetCookie` and return response with status.
+
+```js
+export const login = async (req,res) => {
+    const {email,password} = req.body;
+    try {
+        const user = await User.findOne({email});
+        if(!user){return res.status(400).json({success:false, message: "Invalid credentials"})
+        };
+    const isPasswordValid = await bcryptjs.compare(password, user.password);
+    if(!isPasswordValid){return res.status(400).json({success:false, message: "Invalid credentials"})}
+    generateTokenAndSetCookie(res,user._id);
+    user.lastLogin= new Date();
+    await user.save();
+    
+    res.status(200).json({
+        success:true,
+        message:"Loggedin Successfully",
+        user: {
+            ...user._doc,
+            password: undefined
+        }
+    })
+    } 
+    catch (error) {
+        console.log("Error in Login",error);
+        res.status(400).json({success:false, message: error.message});
+        
+    } 
+}
+```
+
+### Logout
+This is very simple. When accessed the function, clear the cookies and send status code.
+```js
+export const logout = async (req,res) => {
+    res.clearCookie("token");
+    res.status(200).json({
+        success:true,
+        message: "Logged Out successfully"
+    });
+}
+```
